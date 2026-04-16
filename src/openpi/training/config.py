@@ -98,6 +98,9 @@ class DataConfig:
     # List of datasets to sample from: name, version, weight, and optionally filter_dict_path
     datasets: Sequence[droid_rlds_dataset.RLDSDataset] = ()
 
+    # Set root folder for local dataset
+    root_folder : str | None = None
+
 
 class GroupFactory(Protocol):
     def __call__(self, model_config: _model.BaseModelConfig) -> _transforms.Group:
@@ -1009,25 +1012,28 @@ _CONFIGS = [
     #
     # Fine-Tuting from RLBench LeRobot dataset
     #
-    TrainConfig(
-        name = "pi05_rlbench",
-        model=pi0_config.Pi0Config(pi05=True, action_horizon=10, discrete_state_input=False),
-        data=LeRobotRLBenchDataConfig(
-            repo_id="RLBench/16-test",
-            base_config=DataConfig(prompt_from_task=True)
+        TrainConfig(
+            name = "pi05_rlbench",
+            model=pi0_config.Pi0Config(pi05=True, action_horizon=10, discrete_state_input=False),
+            data=LeRobotRLBenchDataConfig(
+                repo_id="RLBench/16-test",
+                base_config=DataConfig(
+                    prompt_from_task=True,
+                    root_folder = "/home/peraro/source/play-lerobot/datasets/lerobot/16-test"
+                    )
+            ),
+            batch_size=256,
+            lr_schedule=_optimizer.CosineDecaySchedule(
+                warmup_steps=10_000,
+                peak_lr=5e-5,
+                decay_steps=1_000_000,
+                decay_lr=5e-5,
+            ),
+            optimizer=_optimizer.AdamW(clip_gradient_norm=1.0),
+            ema_decay=0.999,
+            weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"),
+            num_train_steps=30_000,
         ),
-        batch_size=256,
-        lr_schedule=_optimizer.CosineDecaySchedule(
-            warmup_steps=10_000,
-            peak_lr=5e-5,
-            decay_steps=1_000_000,
-            decay_lr=5e-5,
-        ),
-        optimizer=_optimizer.AdamW(clip_gradient_norm=1.0),
-        ema_decay=0.999,
-        weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"),
-        num_train_steps=30_000,
-    ),
     
     #
     # Debugging configs.
