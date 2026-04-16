@@ -137,13 +137,25 @@ def create_torch_dataset(
     if repo_id == "fake":
         return FakeDataset(model_config, num_samples=1024)
 
-    dataset_meta = lerobot_dataset.LeRobotDatasetMetadata(repo_id)
-    dataset = lerobot_dataset.LeRobotDataset(
-        data_config.repo_id,
-        delta_timestamps={
-            key: [t / dataset_meta.fps for t in range(action_horizon)] for key in data_config.action_sequence_keys
-        },
-    )
+    assert data_config.repo_id is not None
+    dataset_meta = lerobot_dataset.LeRobotDatasetMetadata(repo_id, root=data_config.root_folder)
+    if data_config.root_folder is not None and os.path.exists(data_config.root_folder): 
+        print(f"Found dataset at {data_config.repo_id}")
+        dataset = lerobot_dataset.LeRobotDataset(
+            data_config.repo_id,
+            root=data_config.root_folder,
+            delta_timestamps={
+                key: [t / dataset_meta.fps for t in range(action_horizon)] for key in data_config.action_sequence_keys
+            },
+        )
+    else:
+        dataset = lerobot_dataset.LeRobotDataset(
+            data_config.repo_id,
+            delta_timestamps={
+                key: [t / dataset_meta.fps for t in range(action_horizon)] for key in data_config.action_sequence_keys
+            },
+        )
+
 
     if data_config.prompt_from_task:
         dataset = TransformedDataset(dataset, [_transforms.PromptFromLeRobotTask(dataset_meta.tasks)])
