@@ -7,6 +7,15 @@ import numpy as np
 from openpi import transforms
 from openpi.models import model as _model
 
+
+def _parse_image(image) -> np.ndarray:
+    image = np.asarray(image)
+    if np.issubdtype(image.dtype, np.floating):
+        image = (255 * image).astype(np.uint8)
+    if image.shape[0] == 3:
+        image = einops.rearrange(image, "c h w -> h w c")
+    return image
+
 @dataclasses.dataclass(frozen=True)
 class RLBenchInputs(transforms.DataTransformFn):
     """
@@ -45,9 +54,9 @@ class RLBenchInputs(transforms.DataTransformFn):
         #     "actions" : np.ndarray,   # <--- those will be present only during training
         #     "instruction" : str
         # }
-        # Images from RLBench should already be in uint8
-        front_image = data["observation/image"]
-        wrist_image = data["observation/wrist_image"]
+        # Images from RLBench should already be in uint8, but LeRobot convertss them into float32 (c, h, w)
+        front_image = _parse_image(data["observation/image"])
+        wrist_image = _parse_image(data["observation/wrist_image"])
         # Pad any non-existent images with zero-arrays of the appropriate shape.
         third_image =  np.zeros_like(front_image)   # TODO: well right now we only use 2 images, but the model requires 3. Pad to 0
         state = data["observation/state"]
