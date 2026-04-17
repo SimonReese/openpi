@@ -77,6 +77,8 @@ IMAGE_RESOLUTION = (224, 224)
 #   h,w = image height/width
 #   s = state dimension
 #   l = sequence length
+#   ah = action horizon
+#   ad = action dimension
 #
 @at.typecheck
 @struct.dataclass
