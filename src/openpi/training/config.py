@@ -1016,10 +1016,10 @@ _CONFIGS = [
         name = "pi05_rlbench",
         model=pi0_config.Pi0Config(pi05=True, action_horizon=10, discrete_state_input=False),
         data=LeRobotRLBenchDataConfig(
-            repo_id="RLBench/20-ep",
+            repo_id="SimonReese/lerobot-20-ep-v2",
             base_config=DataConfig(
                 prompt_from_task=True,
-                root_folder = "/home/peraro/source/play-openpi/datasets/20-ep"
+                root_folder = "/home/peraro/source/openpi-vggt/datasets/lerobot-20-ep-v2"
                 )
         ),
         batch_size=256,
@@ -1041,10 +1041,10 @@ _CONFIGS = [
             pi05=True, action_horizon=10, discrete_state_input=False
         ),
         data=LeRobotRLBenchDataConfig(
-            repo_id="RLBench/20-ep",
+            repo_id="SimonReese/lerobot-20-ep-v2",
             base_config=DataConfig(
                 prompt_from_task=True,
-                root_folder = "/home/peraro/source/play-openpi/datasets/20-ep"
+                root_folder = "/home/peraro/source/openpi-vggt/datasets/lerobot-20-ep-v2"
                 )
         ),
         batch_size=2,
