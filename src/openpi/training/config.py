@@ -11,6 +11,7 @@ from typing import Any, Literal, Protocol, TypeAlias
 import etils.epath as epath
 import flax.nnx as nnx
 import openpi.policies.rlbench_policy as rlbench_policy
+import torch
 from typing_extensions import override
 import tyro
 
@@ -29,6 +30,8 @@ import openpi.training.misc.roboarena_config as roboarena_config
 import openpi.training.optimizer as _optimizer
 import openpi.training.weight_loaders as weight_loaders
 import openpi.transforms as _transforms
+
+from vggt_omega.models.vggt_omega import VGGTOmega
 
 ModelType: TypeAlias = _model.ModelType
 # Work around a tyro issue with using nnx.filterlib.Filter directly.
@@ -473,6 +476,8 @@ class LeRobotRLBenchDataConfig(DataConfigFactory):
 
     extra_delta_transform: bool = False
 
+    vggt_checkpoint_path: str = "vggt_omega_1b_512.pt"
+
     @override
     def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
         # The repack transform is *only* applied to the data coming from the dataset,
@@ -503,8 +508,14 @@ class LeRobotRLBenchDataConfig(DataConfigFactory):
         # We defined these transforms in `libero_policy.py`. You can check the detailed comments there for
         # how to modify the transforms to match your dataset. Once you created your own transforms, you can
         # replace the transforms below with your own.
+
+        # Adds vggt
+        vggt_model = VGGTOmega().to("cuda").eval()
+        vggt_model.load_state_dict(torch.load(self.vggt_checkpoint_path, map_location="cpu"))
+        print(f"VGGTOmega model loaded")
         data_transforms = _transforms.Group(
-            inputs=[rlbench_policy.RLBenchInputs(model_type=model_config.model_type)],
+            inputs=[rlbench_policy.RLBenchInputs(model_type=model_config.model_type),
+                    _transforms.VGGTTokenizer(vggt_model)],
             outputs=[rlbench_policy.RLBenchOutputs()],
         )
 
@@ -1020,7 +1031,8 @@ _CONFIGS = [
             base_config=DataConfig(
                 prompt_from_task=True,
                 root_folder = "/home/peraro/source/openpi-vggt/datasets/lerobot-20-ep-v2"
-                )
+                ),
+            vggt_checkpoint_path="/home/peraro/source/openpi-vggt/weights/vggt_omega_1b_512.pt"
         ),
         batch_size=256,
         lr_schedule=_optimizer.CosineDecaySchedule(
@@ -1033,6 +1045,7 @@ _CONFIGS = [
         ema_decay=0.999,
         weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"),
         num_train_steps=30_000,
+        num_workers=0   # 0 beacuase vggt model is not serializable
     ),
     TrainConfig(
         name = "pi05_rlbench_lora",
@@ -1045,7 +1058,8 @@ _CONFIGS = [
             base_config=DataConfig(
                 prompt_from_task=True,
                 root_folder = "/home/peraro/source/openpi-vggt/datasets/lerobot-20-ep-v2"
-                )
+                ),
+            vggt_checkpoint_path="/home/peraro/source/openpi-vggt/weights/vggt_omega_1b_512.pt"
         ),
         batch_size=2,
         lr_schedule=_optimizer.CosineDecaySchedule(
@@ -1061,6 +1075,7 @@ _CONFIGS = [
         freeze_filter=pi0_config.Pi0Config(pi05=True,
             paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
         ).get_freeze_filter(),
+        num_workers=0
     ),
     
     #

@@ -123,6 +123,12 @@ class Pi0(_model.BaseModel):
             )
             # image tokens attend to each other
             ar_mask += [False] * image_tokens.shape[1]
+        
+        # adds vggt tokens
+        if obs.vggt_tokens is not None:
+            tokens.append(obs.vggt_tokens)
+            input_mask.append(obs.vggt_tokens_mask)
+            ar_mask += [False] * obs.vggt_tokens.shape[1]
 
         # add language (aka tokenized inputs)
         if obs.tokenized_prompt is not None:
