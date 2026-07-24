@@ -1043,7 +1043,7 @@ _CONFIGS = [
         ),
         optimizer=_optimizer.AdamW(clip_gradient_norm=1.0),
         ema_decay=None, #0.999,
-        weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"),
+        weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"), #fix missing regex
         num_train_steps=60_000,
         fsdp_devices=4,
         num_workers=0   # 0 beacuase vggt model is not serializable
@@ -1071,7 +1071,7 @@ _CONFIGS = [
         ),
         optimizer=_optimizer.AdamW(clip_gradient_norm=1.0),
         ema_decay=None,
-        weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"),
+        weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"), #fix missing regex
         num_train_steps=30_000,
         freeze_filter=pi0_config.Pi0Config(pi05=True,
             paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"
@@ -1101,7 +1101,10 @@ _CONFIGS = [
         ),
         optimizer=_optimizer.AdamW(clip_gradient_norm=1.0),
         ema_decay=None, #0.999,
-        weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"),
+        weight_loader=weight_loaders.CheckpointWeightLoader(
+            "gs://openpi-assets/checkpoints/pi05_base/params",
+            missing_regex=".*(lora|vggt_proj|vggt_norm|spatial_proj_in|spatial_proj_out|spatial_norm).*"
+            ),
         num_train_steps=60_000,
         fsdp_devices=4,
         num_workers=0   # 0 beacuase vggt model is not serializable
