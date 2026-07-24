@@ -112,6 +112,10 @@ class Observation(Generic[ArrayT]):
     vggt_tokens: at.Float[ArrayT, "*b s d"] | None = None       # (B, N*16, 2048)  
     vggt_tokens_mask: at.Bool[ArrayT, "*b s"] | None = None     # (B, N*16)
 
+    # Utonia spatial tokens
+    spatial: at.Float[ArrayT, "*b objects bins dims"] | None = None  
+    spatial_mask: at.Bool[ArrayT, "*b"] | None = None
+
     @classmethod
     def from_dict(cls, data: at.PyTree[ArrayT]) -> "Observation[ArrayT]":
         """This method defines the mapping between unstructured data (i.e., nested dict) to the structured Observation format."""
@@ -134,6 +138,8 @@ class Observation(Generic[ArrayT]):
             token_loss_mask=data.get("token_loss_mask"),
             vggt_tokens=data.get("vggt_tokens"),  
             vggt_tokens_mask=data.get("vggt_tokens_mask"),
+            spatial=data.get("spatial"),  
+            spatial_mask=data.get("spatial_mask"),
         )
 
     def to_dict(self) -> at.PyTree[ArrayT]:
@@ -213,6 +219,10 @@ def preprocess_observation(
         tokenized_prompt_mask=observation.tokenized_prompt_mask,
         token_ar_mask=observation.token_ar_mask,
         token_loss_mask=observation.token_loss_mask,
+        vggt_tokens=observation.vggt_tokens,
+        vggt_tokens_mask=observation.vggt_tokens_mask,
+        spatial=observation.spatial,
+        spatial_mask=observation.spatial_mask
     )
 
 

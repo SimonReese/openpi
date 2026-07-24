@@ -367,6 +367,7 @@ class VGGTTokenizer(DataTransformFn):
         B, N, T, D = registers.shape
         tokens = registers.reshape(B, N * T, D)
         # Store them into dict
+        assert tokens.shape[0] == 1, f"Expected B=1, got {tokens.shape[0]}"
         data["vggt_tokens"] = tokens[0].float().cpu().numpy() # (B, N* 16, 2048)
         data["vggt_tokens_mask"] = np.ones((N*T), dtype=bool)
         return data
