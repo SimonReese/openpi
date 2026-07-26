@@ -1043,7 +1043,9 @@ _CONFIGS = [
         ),
         optimizer=_optimizer.AdamW(clip_gradient_norm=1.0),
         ema_decay=None, #0.999,
-        weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"), #fix missing regex
+        weight_loader=weight_loaders.CheckpointWeightLoader(
+            "gs://openpi-assets/checkpoints/pi05_base/params",
+            missing_regex=".*(lora|vggt_proj|vggt_norm|spatial_proj_in|spatial_proj_out|spatial_norm).*"),
         num_train_steps=60_000,
         fsdp_devices=4,
         num_workers=0   # 0 beacuase vggt model is not serializable

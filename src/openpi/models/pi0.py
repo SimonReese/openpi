@@ -104,13 +104,6 @@ class Pi0(_model.BaseModel):
         # GELU added in embed_prefix
         self.vggt_proj = nnx.Linear(paligemma_config.width, paligemma_config.width, rngs=rngs)
 
-        # Utonia projector
-        UTONIA_EMBED_DIM = 1389
-        self.spatial_norm = nnx.RMSNorm(1389, rngs=rngs)
-        self.spatial_proj_in = nnx.Linear(1389, paligemma_config.width, rngs=rngs)
-        # GELU added in embed_prefix
-        self.spatial_proj_out = nnx.Linear(paligemma_config.width, paligemma_config.width, rngs=rngs)
-
         # This attribute gets automatically set by model.train() and model.eval().
         self.deterministic = True
 
@@ -151,19 +144,6 @@ class Pi0(_model.BaseModel):
             tokens.append(vggt)
             input_mask.append(obs.vggt_tokens_mask)
             ar_mask += [False] * vggt.shape[1]
-
-        # adds utonia tokens
-        if obs.spatial is not None:
-                # obs.spatial: (b, 3, 27, 1389)  
-                b, objects, bins, dims = obs.spatial.shape  
-                spatial_flat = obs.spatial.reshape(b, objects * bins, dims)  # (b, 81, 1389)
-                spatial_tokens = self.spatial_norm(spatial_flat)                    # Norm
-                spatial_tokens = jax.nn.gelu(self.spatial_proj_in(spatial_tokens))     # GELU
-                spatial_tokens = self.spatial_proj_out(spatial_tokens)              # (b, 81, 2048)  
-                tokens.append(spatial_tokens)  
-                # mask: all valid (or expanded obs.spatial_mask)  
-                input_mask.append(jnp.ones((b, objects * bins), dtype=jnp.bool_))  
-                ar_mask += [False] * (objects * bins)  # bidirectional attention
 
         tokens = jnp.concatenate(tokens, axis=1)
         input_mask = jnp.concatenate(input_mask, axis=1)

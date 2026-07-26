@@ -81,9 +81,7 @@ class Pi0Config(_model.BaseModelConfig):
                 tokenized_prompt=jax.ShapeDtypeStruct([batch_size, self.max_token_len], jnp.int32),
                 tokenized_prompt_mask=jax.ShapeDtypeStruct([batch_size, self.max_token_len], bool),
                 vggt_tokens=jax.ShapeDtypeStruct([batch_size, 32, 2048], jnp.float32),  
-                vggt_tokens_mask=jax.ShapeDtypeStruct([batch_size, 32], jnp.bool_),  
-                spatial=jax.ShapeDtypeStruct([batch_size, 3, 27, 1389], jnp.float32),
-                spatial_mask=jax.ShapeDtypeStruct([batch_size], jnp.bool_),
+                vggt_tokens_mask=jax.ShapeDtypeStruct([batch_size, 32], jnp.bool_),
             )
         action_spec = jax.ShapeDtypeStruct([batch_size, self.action_horizon, self.action_dim], jnp.float32)
 
