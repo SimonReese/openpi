@@ -1085,10 +1085,10 @@ _CONFIGS = [
         name = "pi05_rlbench_vggt_utonia",
         model=pi0_config.Pi0Config(pi05=True, action_horizon=10, discrete_state_input=False),
         data=LeRobotRLBenchDataConfig(
-            repo_id="SimonReese/lerobot-arrange-train-utonia-v2",
+            repo_id="SimonReese/lerobot-arrange-train-utonia-single-v2",
             base_config=DataConfig(
                 prompt_from_task=True,
-                root_folder = "/nfsd/iaslab4/Users/perarosimo/source/openpi-vggt/datasets/SimonReese/lerobot-arrange-train-utonia-v2/"
+                root_folder = "/nfsd/iaslab4/Users/perarosimo/source/openpi-vggt/datasets/SimonReese/lerobot-arrange-train-utonia-single-v2/"
                 ),
             vggt_checkpoint_path="/nfsd/iaslab4/Users/perarosimo/source/openpi-vggt/vggt-1b/vggt_omega_1b_512.pt"
         ),
