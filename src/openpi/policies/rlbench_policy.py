@@ -84,6 +84,11 @@ class RLBenchInputs(transforms.DataTransformFn):
         # Actions are only available during training.
         if "actions" in data:
             inputs["actions"] = data["actions"]
+        # Utonia
+        if "spatial" in data:
+            inputs["spatial"] = data["spatial"]
+        if "spatial_mask" in data:
+            inputs["spatial_mask"] = data["spatial_mask"]
 
         return inputs
     
