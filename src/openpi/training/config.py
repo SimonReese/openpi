@@ -497,6 +497,7 @@ class LeRobotRLBenchDataConfig(DataConfigFactory):
                         "observation/state": "state",
                         "actions": "actions",
                         "instruction": "prompt",
+                        "spatial" : "spatial"
                     }
                 )
             ]
@@ -1088,9 +1089,9 @@ _CONFIGS = [
             repo_id="SimonReese/lerobot-arrange-train-utonia-single-v2",
             base_config=DataConfig(
                 prompt_from_task=True,
-                root_folder = "/nfsd/iaslab4/Users/perarosimo/source/openpi-vggt/datasets/SimonReese/lerobot-arrange-train-utonia-single-v2/"
+                root_folder = "datasets/SimonReese/lerobot-arrange-train-utonia-single-v2/"
                 ),
-            vggt_checkpoint_path="/nfsd/iaslab4/Users/perarosimo/source/openpi-vggt/vggt-1b/vggt_omega_1b_512.pt"
+            vggt_checkpoint_path="vggt-1b/vggt_omega_1b_512.pt"
         ),
         batch_size=64, #256,
         lr_schedule=_optimizer.CosineDecaySchedule(
