@@ -113,7 +113,7 @@ class Observation(Generic[ArrayT]):
     vggt_tokens_mask: at.Bool[ArrayT, "*b s"] | None = None     # (B, N*16)
 
     # Utonia spatial tokens
-    spatial: at.Float[ArrayT, "*b objects bins dims"] | None = None  
+    spatial: at.Float[ArrayT, "*b objects dims"] | None = None  
     spatial_mask: at.Bool[ArrayT, "*b"] | None = None
 
     @classmethod
