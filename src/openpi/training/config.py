@@ -476,7 +476,7 @@ class LeRobotRLBenchDataConfig(DataConfigFactory):
 
     extra_delta_transform: bool = False
 
-    vggt_checkpoint_path: str = "vggt_omega_1b_512.pt"
+    # vggt_checkpoint_path: str = "vggt_omega_1b_512.pt"
 
     @override
     def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
@@ -511,12 +511,13 @@ class LeRobotRLBenchDataConfig(DataConfigFactory):
         # replace the transforms below with your own.
 
         # Adds vggt
-        vggt_model = VGGTOmega().to("cuda").eval()
-        vggt_model.load_state_dict(torch.load(self.vggt_checkpoint_path, map_location="cpu"))
-        print(f"VGGTOmega model loaded")
+        # vggt_model = VGGTOmega().to("cuda").eval()
+        # vggt_model.load_state_dict(torch.load(self.vggt_checkpoint_path, map_location="cpu"))
+        # print(f"VGGTOmega model loaded")
         data_transforms = _transforms.Group(
             inputs=[rlbench_policy.RLBenchInputs(model_type=model_config.model_type),
-                    _transforms.VGGTTokenizer(vggt_model)],
+                    # _transforms.VGGTTokenizer(vggt_model)
+                    ],
             outputs=[rlbench_policy.RLBenchOutputs()],
         )
 
@@ -1110,6 +1111,33 @@ _CONFIGS = [
         fsdp_devices=4,
         num_workers=0   # 0 beacuase vggt model is not serializable
     ),
+    TrainConfig(
+            name = "pi05_rlbench_utonia_only",
+            model=pi0_config.Pi0Config(pi05=True, action_horizon=10, discrete_state_input=False),
+            data=LeRobotRLBenchDataConfig(
+                repo_id="SimonReese/lerobot-arrange-train-utonia-single-v2",
+                base_config=DataConfig(
+                    prompt_from_task=True,
+                    root_folder = "datasets/SimonReese/lerobot-arrange-train-utonia-single-v2/"
+                    ),
+            ),
+            batch_size=64, #256,
+            lr_schedule=_optimizer.CosineDecaySchedule(
+                warmup_steps=500, #10_000,
+                peak_lr=1.25e-5, #5e-5,
+                decay_steps=500_000, #1_000_000,
+                decay_lr=1.25e-5, #5e-5,
+            ),
+            optimizer=_optimizer.AdamW(clip_gradient_norm=1.0),
+            ema_decay=None, #0.999,
+            weight_loader=weight_loaders.CheckpointWeightLoader(
+                "gs://openpi-assets/checkpoints/pi05_base/params",
+                missing_regex=".*(lora|spatial_proj_in|spatial_proj_out|spatial_norm).*"
+                ),
+            num_train_steps=10_000,
+            fsdp_devices=4,
+            num_workers=0   # 0 beacuase vggt model is not serializable
+        ),
     #
     # Debugging configs.
     #

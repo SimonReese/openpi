@@ -348,29 +348,29 @@ class PadStatesAndActions(DataTransformFn):
             data["actions"] = pad_to_dim(data["actions"], self.model_action_dim, axis=-1)
         return data
 
-@dataclasses.dataclass(frozen=True)
-class VGGTTokenizer(DataTransformFn):
-    vggt_model:  tyro.conf.Suppress[VGGTOmega] 
+# @dataclasses.dataclass(frozen=True)
+# class VGGTTokenizer(DataTransformFn):
+#     vggt_model:  tyro.conf.Suppress[VGGTOmega] 
 
-    def __call__(self, data: DataDict) -> DataDict:
-        # Extract raw images check before [-1, 1] trasfomration and preparee them, then store it into dict
-        # From rlbenchinput datatransform, those should be already numpy uint8 h w c
-        front_img = data["image"]["base_0_rgb"]
-        wrist_img = data["image"]["left_wrist_0_rgb"]
+#     def __call__(self, data: DataDict) -> DataDict:
+#         # Extract raw images check before [-1, 1] trasfomration and preparee them, then store it into dict
+#         # From rlbenchinput datatransform, those should be already numpy uint8 h w c
+#         front_img = data["image"]["base_0_rgb"]
+#         wrist_img = data["image"]["left_wrist_0_rgb"]
 
-        images = vggt_preprocessing([front_img, wrist_img]).to("cuda")
-        with torch.no_grad():
-            predictions = self.vggt_model(images)
-        camera_and_register_tokens = predictions["camera_and_register_tokens"]
-        # Take last 16 register tokens
-        registers: torch.Tensor = camera_and_register_tokens[:, :, 1:]
-        B, N, T, D = registers.shape
-        tokens = registers.reshape(B, N * T, D)
-        # Store them into dict
-        assert tokens.shape[0] == 1, f"Expected B=1, got {tokens.shape[0]}"
-        data["vggt_tokens"] = tokens[0].float().cpu().numpy() # (B, N* 16, 2048)
-        data["vggt_tokens_mask"] = np.ones((N*T), dtype=bool)
-        return data
+#         images = vggt_preprocessing([front_img, wrist_img]).to("cuda")
+#         with torch.no_grad():
+#             predictions = self.vggt_model(images)
+#         camera_and_register_tokens = predictions["camera_and_register_tokens"]
+#         # Take last 16 register tokens
+#         registers: torch.Tensor = camera_and_register_tokens[:, :, 1:]
+#         B, N, T, D = registers.shape
+#         tokens = registers.reshape(B, N * T, D)
+#         # Store them into dict
+#         assert tokens.shape[0] == 1, f"Expected B=1, got {tokens.shape[0]}"
+#         data["vggt_tokens"] = tokens[0].float().cpu().numpy() # (B, N* 16, 2048)
+#         data["vggt_tokens_mask"] = np.ones((N*T), dtype=bool)
+#         return data
 
 
 def flatten_dict(tree: at.PyTree) -> dict:
@@ -495,37 +495,37 @@ def _assert_quantile_stats(norm_stats: at.PyTree[NormStats]) -> None:
                 f"quantile stats must be provided if use_quantile_norm is True. Key {k} is missing q01 or q99."
             )
 
-def vggt_preprocessing(numpy_images: list[np.ndarray], mode="balanced", image_resolution=512, patch_size=16):
-    """Images: list on numpy uint8 imgs h w c"""
-    to_tensor = TF.ToTensor()  
-    images = []  
-    shapes = set()  
+# def vggt_preprocessing(numpy_images: list[np.ndarray], mode="balanced", image_resolution=512, patch_size=16):
+#     """Images: list on numpy uint8 imgs h w c"""
+#     to_tensor = TF.ToTensor()  
+#     images = []  
+#     shapes = set()  
   
-    for arr in numpy_images:  
-        # numpy uint8 (H, W, C) → PIL RGB  
-        pil_img = Image.fromarray(arr.astype(np.uint8), mode="RGB")  
+#     for arr in numpy_images:  
+#         # numpy uint8 (H, W, C) → PIL RGB  
+#         pil_img = Image.fromarray(arr.astype(np.uint8), mode="RGB")  
   
-        # crop aspect ratio (out of [0.5, 2.0])  
-        pil_img = _crop_to_supported_aspect_ratio(pil_img)  
+#         # crop aspect ratio (out of [0.5, 2.0])  
+#         pil_img = _crop_to_supported_aspect_ratio(pil_img)  
   
-        # target shape and resize  
-        width, height = pil_img.size  
-        aspect_ratio = height / max(width, 1)  
-        if mode == "balanced":  
-            target_h, target_w = _balanced_target_shape(aspect_ratio, image_resolution, patch_size)  
-        else:  
-            from vggt_omega.utils.load_fn import _max_size_target_shape  
-            target_h, target_w = _max_size_target_shape(aspect_ratio, image_resolution, patch_size)  
+#         # target shape and resize  
+#         width, height = pil_img.size  
+#         aspect_ratio = height / max(width, 1)  
+#         if mode == "balanced":  
+#             target_h, target_w = _balanced_target_shape(aspect_ratio, image_resolution, patch_size)  
+#         else:  
+#             from vggt_omega.utils.load_fn import _max_size_target_shape  
+#             target_h, target_w = _max_size_target_shape(aspect_ratio, image_resolution, patch_size)  
   
-        pil_img = pil_img.resize((target_w, target_h), Image.Resampling.BICUBIC)  
+#         pil_img = pil_img.resize((target_w, target_h), Image.Resampling.BICUBIC)  
   
-        # PIL → tensor float32 [0, 1], shape (C, H, W)  
-        t = to_tensor(pil_img)  
-        shapes.add((t.shape[1], t.shape[2]))  
-        images.append(t)  
+#         # PIL → tensor float32 [0, 1], shape (C, H, W)  
+#         t = to_tensor(pil_img)  
+#         shapes.add((t.shape[1], t.shape[2]))  
+#         images.append(t)  
   
-    # padding if necessary  
-    if len(shapes) > 1:  
-        images = _pad_images_to_common_size(images, shapes)  
+#     # padding if necessary  
+#     if len(shapes) > 1:  
+#         images = _pad_images_to_common_size(images, shapes)  
   
-    return torch.stack(images)  # shape: (N, C, H, W)
+#     return torch.stack(images)  # shape: (N, C, H, W)

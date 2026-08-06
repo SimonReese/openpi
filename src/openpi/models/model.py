@@ -109,8 +109,8 @@ class Observation(Generic[ArrayT]):
     token_loss_mask: at.Bool[ArrayT, "*b l"] | None = None
 
     # VGGT Tokens
-    vggt_tokens: at.Float[ArrayT, "*b s d"] | None = None       # (B, N*16, 2048)  
-    vggt_tokens_mask: at.Bool[ArrayT, "*b s"] | None = None     # (B, N*16)
+    # vggt_tokens: at.Float[ArrayT, "*b s d"] | None = None       # (B, N*16, 2048)  
+    # vggt_tokens_mask: at.Bool[ArrayT, "*b s"] | None = None     # (B, N*16)
 
     # Utonia spatial tokens
     spatial: at.Float[ArrayT, "*b objects dims"] | None = None  
@@ -136,8 +136,8 @@ class Observation(Generic[ArrayT]):
             tokenized_prompt_mask=data.get("tokenized_prompt_mask"),
             token_ar_mask=data.get("token_ar_mask"),
             token_loss_mask=data.get("token_loss_mask"),
-            vggt_tokens=data.get("vggt_tokens"),  
-            vggt_tokens_mask=data.get("vggt_tokens_mask"),
+            # vggt_tokens=data.get("vggt_tokens"),  
+            # vggt_tokens_mask=data.get("vggt_tokens_mask"),
             spatial=data.get("spatial"),  
             spatial_mask=data.get("spatial_mask"),
         )
@@ -219,8 +219,8 @@ def preprocess_observation(
         tokenized_prompt_mask=observation.tokenized_prompt_mask,
         token_ar_mask=observation.token_ar_mask,
         token_loss_mask=observation.token_loss_mask,
-        vggt_tokens=observation.vggt_tokens,
-        vggt_tokens_mask=observation.vggt_tokens_mask,
+        # vggt_tokens=observation.vggt_tokens,
+        # vggt_tokens_mask=observation.vggt_tokens_mask,
         spatial=observation.spatial,
         spatial_mask=observation.spatial_mask
     )

@@ -100,10 +100,10 @@ class Pi0(_model.BaseModel):
         self.action_out_proj = nnx.Linear(action_expert_config.width, config.action_dim, rngs=rngs)
 
         # Vggt projectors - vggt has same embeddings sizes than paligemma (2048)
-        self.vggt_norm = nnx.RMSNorm(paligemma_config.width, rngs=rngs)
-        self.vggt_proj_in = nnx.Linear(paligemma_config.width, paligemma_config.width, rngs=rngs)
+        #self.vggt_norm = nnx.RMSNorm(paligemma_config.width, rngs=rngs)
+        #self.vggt_proj_in = nnx.Linear(paligemma_config.width, paligemma_config.width, rngs=rngs)
         # GELU added in embed_prefix
-        self.vggt_proj_out = nnx.Linear(paligemma_config.width, paligemma_config.width, rngs=rngs)
+        #self.vggt_proj_out = nnx.Linear(paligemma_config.width, paligemma_config.width, rngs=rngs)
 
         # Utonia projector
         UTONIA_EMBED_DIM = 1386
@@ -146,17 +146,17 @@ class Pi0(_model.BaseModel):
             ar_mask += [False] * tokenized_inputs.shape[1]
         
         # adds vggt tokens
-        if obs.vggt_tokens is not None:
-            # obs.vggt_tokens (B, N*16, 2048)
-            b, n_r, dims = obs.vggt_tokens.shape
-            assert n_r == 32 and dims == 2048, f"Error, obs.vggt_tokens was not of expected shape (B, 2*16, 2048) but {obs.vggt_tokens}"
-            vggt = self.vggt_norm(obs.vggt_tokens)          # Norm
-            vggt = jax.nn.gelu(self.vggt_proj_in(vggt))     # GELU
-            vggt = self.vggt_proj_out(vggt)                 # (b, n*16, 2048)
-            tokens.append(vggt)
-            input_mask.append(obs.vggt_tokens_mask)     # Mask valid tokens    
-            ar_mask += [False] * vggt.shape[1]          # bidir attn
-        else: print(f"Warn: obs.vggt_tokens was received empty on openpi/models/pi0.py:Pi0:embed_prefix()")
+        # if obs.vggt_tokens is not None:
+        #     # obs.vggt_tokens (B, N*16, 2048)
+        #     b, n_r, dims = obs.vggt_tokens.shape
+        #     assert n_r == 32 and dims == 2048, f"Error, obs.vggt_tokens was not of expected shape (B, 2*16, 2048) but {obs.vggt_tokens}"
+        #     vggt = self.vggt_norm(obs.vggt_tokens)          # Norm
+        #     vggt = jax.nn.gelu(self.vggt_proj_in(vggt))     # GELU
+        #     vggt = self.vggt_proj_out(vggt)                 # (b, n*16, 2048)
+        #     tokens.append(vggt)
+        #     input_mask.append(obs.vggt_tokens_mask)     # Mask valid tokens    
+        #     ar_mask += [False] * vggt.shape[1]          # bidir attn
+        # else: print(f"Warn: obs.vggt_tokens was received empty on openpi/models/pi0.py:Pi0:embed_prefix()")
 
         # adds utonia tokens
         if obs.spatial is not None:
