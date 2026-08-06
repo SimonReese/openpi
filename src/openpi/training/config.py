@@ -476,7 +476,7 @@ class LeRobotRLBenchDataConfig(DataConfigFactory):
 
     extra_delta_transform: bool = False
 
-    # vggt_checkpoint_path: str = "vggt_omega_1b_512.pt"
+    vggt_checkpoint_path: str = "vggt_omega_1b_512.pt"
 
     @override
     def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
