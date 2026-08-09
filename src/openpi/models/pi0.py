@@ -99,11 +99,11 @@ class Pi0(_model.BaseModel):
             self.action_time_mlp_out = nnx.Linear(action_expert_config.width, action_expert_config.width, rngs=rngs)
         self.action_out_proj = nnx.Linear(action_expert_config.width, config.action_dim, rngs=rngs)
 
-        # Vggt projectors
-        self.vggt_norm = nnx.RMSNorm(paligemma_config.width, rngs=rngs)
-        # GELU added in embed_prefix
-        self.vggt_proj_in = nnx.Linear(paligemma_config.width, paligemma_config.width, rngs=rngs)
-        self.vggt_proj_out = nnx.Linear(paligemma_config.width, paligemma_config.width, rngs=rngs)
+        # # Vggt projectors
+        # self.vggt_norm = nnx.RMSNorm(paligemma_config.width, rngs=rngs)
+        # # GELU added in embed_prefix
+        # self.vggt_proj_in = nnx.Linear(paligemma_config.width, paligemma_config.width, rngs=rngs)
+        # self.vggt_proj_out = nnx.Linear(paligemma_config.width, paligemma_config.width, rngs=rngs)
 
         # This attribute gets automatically set by model.train() and model.eval().
         self.deterministic = True
@@ -143,9 +143,10 @@ class Pi0(_model.BaseModel):
             # obs.vggt_tokens (B, N*16, 2048)
             b, n_r, dims = obs.vggt_tokens.shape
             assert n_r == 32 and dims == 2048, f"Error, obs.vggt_tokens was not of expected shape (B, 2*16, 2048) but {obs.vggt_tokens}"
-            vggt = self.vggt_norm(obs.vggt_tokens)          # Norm
-            vggt = jax.nn.gelu(self.vggt_proj_in(vggt))     # GELU
-            vggt = self.vggt_proj_out(vggt)                 # (b, n*16, 2048)
+            vggt = obs.vggt_tokens                            # Simple concatenation
+            # vggt = self.vggt_norm(obs.vggt_tokens)          # Norm
+            # vggt = jax.nn.gelu(self.vggt_proj_in(vggt))     # GELU
+            # vggt = self.vggt_proj_out(vggt)                 # (b, n*16, 2048)
             tokens.append(vggt)
             input_mask.append(obs.vggt_tokens_mask)     # Mask valid tokens    
             ar_mask += [False] * vggt.shape[1]          # bidir attn
