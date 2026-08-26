@@ -1083,7 +1083,7 @@ _CONFIGS = [
     # Fine-Tuning from RLBench LeRobot dataset
     #
     TrainConfig(
-        name = "pi05_rlbench_vggt_utonia",
+        name = "pi05_rlbench_vggt_utonia_single",
         model=pi0_config.Pi0Config(pi05=True, action_horizon=10, discrete_state_input=False),
         data=LeRobotRLBenchDataConfig(
             repo_id="SimonReese/lerobot-arrange-train-utonia-single-v2",
@@ -1106,7 +1106,10 @@ _CONFIGS = [
             "gs://openpi-assets/checkpoints/pi05_base/params",
             missing_regex=".*(lora|vggt_proj|vggt_norm|spatial_proj_in|spatial_proj_out|spatial_norm).*"
             ),
-        num_train_steps=60_000,
+        num_train_steps=10_000,
+        log_interval = 100,
+        save_interval = 1000,
+        keep_period = 1000,
         fsdp_devices=4,
         num_workers=0   # 0 beacuase vggt model is not serializable
     ),
