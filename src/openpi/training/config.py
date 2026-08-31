@@ -1135,6 +1135,9 @@ _CONFIGS = [
                 missing_regex=".*(lora|spatial_proj_in|spatial_proj_out|spatial_norm).*"
                 ),
             num_train_steps=10_000,
+            log_interval = 100,
+            save_interval = 1000,
+            keep_period = 1000,
             fsdp_devices=4,
             num_workers=0   # 0 beacuase vggt model is not serializable
         ),
