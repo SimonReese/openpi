@@ -99,11 +99,14 @@ class Pi0(_model.BaseModel):
             self.action_time_mlp_out = nnx.Linear(action_expert_config.width, action_expert_config.width, rngs=rngs)
         self.action_out_proj = nnx.Linear(action_expert_config.width, config.action_dim, rngs=rngs)
 
-        # Vggt projectors - vggt has same embeddings sizes than paligemma (2048)
-        self.vggt_norm = nnx.RMSNorm(paligemma_config.width, rngs=rngs)
-        self.vggt_proj_in = nnx.Linear(paligemma_config.width, paligemma_config.width, rngs=rngs)
+        # Vggt Fusion Layer
+        self.vggt_fusion = VGGTFusion(width=paligemma_config.width, num_heads=8, rngs=rngs)
+
+        # Vggt projectors
+        #self.vggt_norm = nnx.RMSNorm(2048, rngs=rngs)
         # GELU added in embed_prefix
-        self.vggt_proj_out = nnx.Linear(paligemma_config.width, paligemma_config.width, rngs=rngs)
+        #self.vggt_proj_in = nnx.Linear(paligemma_config.width, paligemma_config.width, rngs=rngs)
+        #self.vggt_proj_out = nnx.Linear(paligemma_config.width, paligemma_config.width, rngs=rngs)
 
         # Utonia projector
         UTONIA_EMBED_DIM = 1386
@@ -122,20 +125,38 @@ class Pi0(_model.BaseModel):
         input_mask = []
         ar_mask = []
         tokens = []
-        # embed images
-        for name in obs.images:
-            image_tokens, _ = self.PaliGemma.img(obs.images[name], train=False)
 
-            tokens.append(image_tokens)
-            input_mask.append(
-                einops.repeat(
-                    obs.image_masks[name],
-                    "b -> b s",
-                    s=image_tokens.shape[1],
-                )
-            )
-            # image tokens attend to each other
-            ar_mask += [False] * image_tokens.shape[1]
+        vggt_per_image = None  
+        vggt_mask_per_image = None  
+        if obs.vggt_tokens is not None:  
+            b, n_r, dims = obs.vggt_tokens.shape  
+            n_images = len(obs.images)  
+            tokens_per_image = n_r // n_images  
+            assert n_r == tokens_per_image * n_images and dims == 2048, (  
+                f"Shape unexpected for obs.vggt_tokens: {obs.vggt_tokens.shape}"  
+            )  
+            vggt = obs.vggt_tokens
+    
+            vggt_per_image = jnp.split(vggt, n_images, axis=1)  
+            vggt_mask_per_image = (  
+                jnp.split(obs.vggt_tokens_mask, n_images, axis=1)  
+                if obs.vggt_tokens_mask is not None  
+                else [None] * n_images  
+            )  
+        else:  
+            print("Warn: obs.vggt_tokens was received empty on openpi/models/pi0.py:Pi0:embed_prefix()")  
+    
+        for idx, name in enumerate(obs.images):  
+            image_tokens, _ = self.PaliGemma.img(obs.images[name], train=False)  
+    
+            if vggt_per_image is not None:  
+                image_tokens = self.vggt_fusion(  
+                    image_tokens, vggt_per_image[idx], vggt_mask_per_image[idx]  
+                )  
+    
+            tokens.append(image_tokens)  
+            input_mask.append(einops.repeat(obs.image_masks[name], "b -> b s", s=image_tokens.shape[1]))  
+            ar_mask += [False] * image_tokens.shape[1]  
         
         # add language (aka tokenized inputs)
         if obs.tokenized_prompt is not None:
@@ -144,19 +165,6 @@ class Pi0(_model.BaseModel):
             input_mask.append(obs.tokenized_prompt_mask)
             # full attention between image and language inputs
             ar_mask += [False] * tokenized_inputs.shape[1]
-        
-        # adds vggt tokens
-        if obs.vggt_tokens is not None:
-            # obs.vggt_tokens (B, N*16, 2048)
-            b, n_r, dims = obs.vggt_tokens.shape
-            assert n_r == 32 and dims == 2048, f"Error, obs.vggt_tokens was not of expected shape (B, 2*16, 2048) but {obs.vggt_tokens}"
-            vggt = self.vggt_norm(obs.vggt_tokens)          # Norm
-            vggt = jax.nn.gelu(self.vggt_proj_in(vggt))     # GELU
-            vggt = self.vggt_proj_out(vggt)                 # (b, n*16, 2048)
-            tokens.append(vggt)
-            input_mask.append(obs.vggt_tokens_mask)     # Mask valid tokens    
-            ar_mask += [False] * vggt.shape[1]          # bidir attn
-        else: print(f"Warn: obs.vggt_tokens was received empty on openpi/models/pi0.py:Pi0:embed_prefix()")
 
         # adds utonia tokens
         if obs.spatial is not None:
@@ -317,3 +325,52 @@ class Pi0(_model.BaseModel):
 
         x_0, _ = jax.lax.while_loop(cond, step, (noise, 1.0))
         return x_0
+
+class VGGTFusion(nnx.Module):  
+    """Cross-attention: image token (query) attend VGGT token (key/value).  
+    Output has same shape as input image token.  
+    """  
+  
+    def __init__(self, width: int, num_heads: int, rngs: nnx.Rngs):  
+        assert width % num_heads == 0, "width must be divisible by num_heads"  
+        self.num_heads = num_heads  
+        self.head_dim = width // num_heads  
+        self.width = width  
+  
+        self.q_norm = nnx.RMSNorm(width, rngs=rngs)  
+        self.kv_norm = nnx.RMSNorm(2048, rngs=rngs)
+  
+        self.q_proj = nnx.Linear(width, width, use_bias=False, rngs=rngs)  
+        self.k_proj = nnx.Linear(2048, width, use_bias=False, rngs=rngs)  
+        self.v_proj = nnx.Linear(2048, width, use_bias=False, rngs=rngs)  
+        self.out_proj = nnx.Linear(width, width, use_bias=False, rngs=rngs)  
+
+        # Start at 50%: models learns how much to balance VGGT tokens with images
+        self.gate = nnx.Linear(width, width, kernel_init=nnx.initializers.zeros, rngs=rngs)  
+  
+    def __call__(self, image_tokens, vggt_tokens, vggt_mask=None):  
+        # image_tokens: (b, n_img, d)   -> Query  
+        # vggt_tokens:  (b, n_vggt, d)  -> Key/Value  
+        # vggt_mask:    (b, n_vggt) bool, optional  
+        b, n_img, d = image_tokens.shape  
+        n_vggt = vggt_tokens.shape[1]  
+        h, hd = self.num_heads, self.head_dim  
+
+        vggt_normed = self.kv_norm(vggt_tokens)  # normalizza una sola volta  
+
+        q = self.q_proj(self.q_norm(image_tokens)).reshape(b, n_img, h, hd)  
+        k = self.k_proj(vggt_normed).reshape(b, n_vggt, h, hd)  
+        v = self.v_proj(vggt_normed).reshape(b, n_vggt, h, hd)    
+  
+        logits = jnp.einsum("bqhd,bkhd->bhqk", q, k) * (hd ** -0.5)  
+  
+        if vggt_mask is not None:  
+            big_neg = -2.3819763e38  
+            logits = jnp.where(vggt_mask[:, None, None, :], logits, big_neg)  
+  
+        probs = jax.nn.softmax(logits, axis=-1)  
+        out = jnp.einsum("bhqk,bkhd->bqhd", probs, v).reshape(b, n_img, d)  
+        out = self.out_proj(out)  
+  
+        gate = nnx.sigmoid(self.gate(image_tokens))  
+        return image_tokens + gate * out
