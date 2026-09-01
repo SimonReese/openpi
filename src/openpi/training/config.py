@@ -1084,15 +1084,15 @@ _CONFIGS = [
     # Fine-Tuning from RLBench LeRobot dataset
     #
     TrainConfig(
-        name = "pi05_rlbench_vggt_utonia",
+        name = "pi05_rlbench_vggt_fused",
         model=pi0_config.Pi0Config(pi05=True, action_horizon=10, discrete_state_input=False),
         data=LeRobotRLBenchDataConfig(
-            repo_id="SimonReese/lerobot-arrange-train-utonia-v2",
+            repo_id="SimonReese/lerobot-arrange-train-v2",
             base_config=DataConfig(
                 prompt_from_task=True,
-                root_folder = "/nfsd/iaslab4/Users/perarosimo/source/openpi-vggt/datasets/SimonReese/lerobot-arrange-train-utonia-v2/"
+                root_folder = "datasets/SimonReese/lerobot-arrange-train-v2/"
                 ),
-            vggt_checkpoint_path="/nfsd/iaslab4/Users/perarosimo/source/openpi-vggt/vggt-1b/vggt_omega_1b_512.pt"
+            vggt_checkpoint_path="vggt-1b/vggt_omega_1b_512.pt"
         ),
         batch_size=64, #256,
         lr_schedule=_optimizer.CosineDecaySchedule(
@@ -1105,9 +1105,12 @@ _CONFIGS = [
         ema_decay=None, #0.999,
         weight_loader=weight_loaders.CheckpointWeightLoader(
             "gs://openpi-assets/checkpoints/pi05_base/params",
-            missing_regex=".*(lora|vggt_proj|vggt_norm|spatial_proj_in|spatial_proj_out|spatial_norm).*"
+            missing_regex=".*(lora|vggt_fusion).*"
             ),
-        num_train_steps=60_000,
+        num_train_steps=10_000,
+        log_interval = 100,
+        save_interval = 1000,
+        keep_period = 1000,
         fsdp_devices=4,
         num_workers=0   # 0 beacuase vggt model is not serializable
     ),
