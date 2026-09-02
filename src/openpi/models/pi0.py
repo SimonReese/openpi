@@ -119,37 +119,36 @@ class Pi0(_model.BaseModel):
         ar_mask = []
         tokens = []
 
-        vggt_per_image = None  
-        vggt_mask_per_image = None  
+        VGGT_IMAGE_KEYS = ("base_0_rgb", "left_wrist_0_rgb")
+        vggt_per_image = None
+        vggt_mask_per_image = None
         if obs.vggt_tokens is not None:  
             b, n_r, dims = obs.vggt_tokens.shape  
-            n_images = len(obs.images)  
-            tokens_per_image = n_r // n_images  
-            assert n_r == tokens_per_image * n_images and dims == 2048, (  
+            n_vggt_images = len(VGGT_IMAGE_KEYS)  
+            tokens_per_image = n_r // n_vggt_images  
+            assert n_r == tokens_per_image * n_vggt_images and dims == 2048, (  
                 f"Shape unexpected for obs.vggt_tokens: {obs.vggt_tokens.shape}"  
             )  
-            vggt = obs.vggt_tokens
-    
-            vggt_per_image = jnp.split(vggt, n_images, axis=1)  
-            vggt_mask_per_image = (  
-                jnp.split(obs.vggt_tokens_mask, n_images, axis=1)  
+            vggt_splits = jnp.split(obs.vggt_tokens, n_vggt_images, axis=1)  
+            mask_splits = (  
+                jnp.split(obs.vggt_tokens_mask, n_vggt_images, axis=1)  
                 if obs.vggt_tokens_mask is not None  
-                else [None] * n_images  
+                else [None] * n_vggt_images  
             )  
+            vggt_per_image = dict(zip(VGGT_IMAGE_KEYS, vggt_splits, strict=True))  
+            vggt_mask_per_image = dict(zip(VGGT_IMAGE_KEYS, mask_splits, strict=True))  
         else:  
             print("Warn: obs.vggt_tokens was received empty on openpi/models/pi0.py:Pi0:embed_prefix()")  
-    
-        for idx, name in enumerate(obs.images):  
+        
+        for name in obs.images:  
             image_tokens, _ = self.PaliGemma.img(obs.images[name], train=False)  
-    
-            if vggt_per_image is not None:  
-                image_tokens = self.vggt_fusion(  
-                    image_tokens, vggt_per_image[idx], vggt_mask_per_image[idx]  
-                )  
-    
+        
+            if name in vggt_per_image:  
+                image_tokens = self.vggt_fusion(image_tokens, vggt_per_image[name], vggt_mask_per_image[name])  
+        
             tokens.append(image_tokens)  
             input_mask.append(einops.repeat(obs.image_masks[name], "b -> b s", s=image_tokens.shape[1]))  
-            ar_mask += [False] * image_tokens.shape[1]  
+            ar_mask += [False] * image_tokens.shape[1]
         
         # add language (aka tokenized inputs)
         if obs.tokenized_prompt is not None:
